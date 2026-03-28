@@ -1,0 +1,91 @@
+<Window x:Class="NixTraceability.MainForm"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:NixTraceability"
+        mc:Ignorable="d"
+        Title="NixTraceability - Main" MinHeight="600" MinWidth="1000" WindowState="Maximized"
+        Icon="Resources/app_icon.png"
+        Background="{DynamicResource AppBackgroundBrush}" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+            <StackPanel Margin="10">
+                <!-- Company Logo or Brand Name -->
+                <Image x:Name="imgCompanyLogo" Height="80" Stretch="Uniform" Margin="10,10,10,5" Visibility="Collapsed"/>
+                <TextBlock x:Name="txtBrandName" Text="NixTraceability" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" Margin="0,10,0,30" TextWrapping="Wrap"/>
+
+                <Button Content="📊 Dashboard" Click="Dashboard_Click" Style="{StaticResource NavButtonStyle}"/>
+                <Button Content="📷 Scan" Click="Scan_Click" Style="{StaticResource NavButtonStyle}"/>
+                <Button Content="📋 Reports" Click="Reports_Click" Style="{StaticResource NavButtonStyle}"/>
+                <Button Content="⚙️ Settings" Click="Settings_Click" Style="{StaticResource NavButtonStyle}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Border Grid.Column="1" Padding="20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Text="Today's Production Dashboard" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="26" FontWeight="SemiBold" Margin="0,0,0,20"/>
+                
+                <!-- KPI Cards -->
+                <Grid Grid.Row="1" Margin="0,0,0,30">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Total Output -->
+                    <Border Grid.Column="0" Background="{DynamicResource ControlBackgroundBrush}" CornerRadius="8" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Total Output" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="lblTotal" Text="0" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="36" FontWeight="Bold" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- OK Parts -->
+                    <Border Grid.Column="2" Background="{DynamicResource OkBackgroundBrush}" CornerRadius="8" Padding="20" BorderBrush="{DynamicResource OkTextBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="OK Parts" Foreground="{DynamicResource OkTextBrush}" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="lblOk" Text="0" Foreground="{DynamicResource OkTextBrush}" FontSize="36" FontWeight="Bold" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- NG Parts -->
+                    <Border Grid.Column="4" Background="{DynamicResource NgBackgroundBrush}" CornerRadius="8" Padding="20" BorderBrush="{DynamicResource NgTextBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="NG Parts" Foreground="{DynamicResource NgTextBrush}" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="lblNg" Text="0" Foreground="{DynamicResource NgTextBrush}" FontSize="36" FontWeight="Bold" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Yield -->
+                    <Border Grid.Column="6" Background="{DynamicResource PanelBackgroundBrush}" CornerRadius="8" Padding="20" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Daily Yield" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="lblYield" Text="0%" Foreground="{DynamicResource AccentBrush}" FontSize="36" FontWeight="Bold" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                
+                <TextBlock Grid.Row="2" Text="📊 Select an option from the menu to begin." Foreground="{DynamicResource SecondaryTextBrush}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

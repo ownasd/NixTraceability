@@ -1,0 +1,50 @@
+<Window x:Class="NixTraceability.ReportForm"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:NixTraceability"
+        mc:Ignorable="d"
+        Title="NixTraceability - Reports" MinHeight="500" MinWidth="800" WindowState="Maximized"
+        Icon="Resources/app_icon.png"
+        Background="{DynamicResource AppBackgroundBrush}" WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Scan Records Dashboard" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+            
+            <TextBlock Grid.Column="1" Text="From:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <DatePicker x:Name="dpFrom" Grid.Column="2" Width="120" Margin="0,0,15,0"/>
+            
+            <TextBlock Grid.Column="3" Text="To:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <DatePicker x:Name="dpTo" Grid.Column="4" Width="120" Margin="0,0,15,0"/>
+            
+            <Button x:Name="btnHome" Grid.Column="5" Content="🏠 Home" Width="100" Height="30" Margin="0,0,0,0" Style="{StaticResource NavButtonStyle}" Click="btnHome_Click"/>
+        </Grid>
+
+        <DataGrid x:Name="dgRecords" Grid.Row="1" Background="{DynamicResource PanelBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" 
+                  BorderBrush="{DynamicResource BorderBrush}" AutoGenerateColumns="True" IsReadOnly="True"
+                  RowBackground="{DynamicResource DataGridRowBackground}" AlternatingRowBackground="{DynamicResource DataGridAltRowBackground}"
+                  GridLinesVisibility="All" HorizontalGridLinesBrush="{DynamicResource DataGridGridLines}"
+                  VerticalGridLinesBrush="{DynamicResource DataGridGridLines}">
+        </DataGrid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button x:Name="btnRefresh" Content="Refresh" Width="100" Height="30" Margin="0,0,10,0" Click="btnRefresh_Click" Style="{StaticResource NavButtonStyle}"/>
+            <Button x:Name="btnExport" Content="Export CSV" Width="120" Height="30" Click="btnExport_Click" Style="{StaticResource NavButtonStyle}"/>
+        </StackPanel>
+    </Grid>
+</Window>
