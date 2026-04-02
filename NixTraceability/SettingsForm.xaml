@@ -200,7 +200,7 @@
                                         <TextBox x:Name="txtNewPartCode" Height="38" Background="{DynamicResource ControlBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}" Padding="8,0" FontSize="15"/>
                                     </StackPanel>
                                     <StackPanel Margin="0,0,15,15">
-                                        <TextBlock Text="Validation (Contains):" Style="{StaticResource LabelText}"/>
+                                        <TextBlock Text="Validation (Comma-separated for multi):" Style="{StaticResource LabelText}"/>
                                         <TextBox x:Name="txtNewValidation" Height="38" Background="{DynamicResource ControlBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}" Padding="8,0" FontSize="15"/>
                                     </StackPanel>
                                     <StackPanel Margin="15,0,0,15">
@@ -217,10 +217,13 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox x:Name="txtNewImagePath" Height="38" Background="{DynamicResource ControlBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}" Padding="8,0" FontSize="13" IsReadOnly="True"/>
                                             <Button Grid.Column="1" Content="📂" Width="38" Height="38" Background="{DynamicResource ControlBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="4,0,0,0" Click="btnBrowsePartImage_Click"/>
+                                            <Button x:Name="btnSetQrArea" Grid.Column="2" Content="📍 Set QR Area" Height="38" Padding="10,0" Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0" Margin="4,0,0,0" Click="btnSetQrArea_Click"/>
                                         </Grid>
+                                        <TextBox x:Name="txtNewQrRect" Visibility="Collapsed"/>
                                     </StackPanel>
                                 </UniformGrid>
                                 <Button x:Name="btnAddPart" Content="➕ Add Part" Width="140" Height="38" Margin="0,15,0,0" HorizontalAlignment="Right" Click="btnAddPart_Click" Background="#28A745" Foreground="White" BorderThickness="0" FontSize="15"/>

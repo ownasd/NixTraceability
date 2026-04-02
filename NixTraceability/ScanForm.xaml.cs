@@ -91,7 +91,8 @@ namespace NixTraceability
                                 Code = reader["PartCode"].ToString() ?? "",
                                 Validation = reader["ValidationText"].ToString() ?? "",
                                 CheckDuplicate = Convert.ToInt32(reader["CheckDuplicate"]) == 1,
-                                ImagePath = reader["ImagePath"]?.ToString() ?? ""
+                                ImagePath = reader["ImagePath"]?.ToString() ?? "",
+                                QrRect = reader["QrRect"]?.ToString() ?? ""
                             };
                             partImagePaths.Add(p.ImagePath);
 
@@ -214,16 +215,83 @@ namespace NixTraceability
                 {
                     partImage.Source = LoadBitmap(imgPath);
                     txtImagePlaceholder.Visibility = Visibility.Collapsed;
+                    
+                    string qrRect = index < textBoxes.Count
+                        ? (textBoxes[index].Tag as PartInfo)?.QrRect ?? ""
+                        : "";
+                    qrHighlightBox.Tag = qrRect;
+                    
+                    Dispatcher.BeginInvoke(new Action(UpdateQrRectPosition), System.Windows.Threading.DispatcherPriority.Render);
                 }
                 else
                 {
                     partImage.Source = null;
                     txtImagePlaceholder.Visibility = Visibility.Visible;
+                    qrHighlightBox.Visibility = Visibility.Collapsed;
+                    qrHighlightBox.Tag = "";
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogError("ScanForm.LoadPartImage", ex);
+            }
+        }
+
+        private void partImage_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateQrRectPosition();
+        }
+
+        private void UpdateQrRectPosition()
+        {
+            if (partImage.Source is BitmapImage bmp && qrHighlightBox.Tag is string qrRect && !string.IsNullOrEmpty(qrRect))
+            {
+                try
+                {
+                    string[] parts = qrRect.Split(',');
+                    if (parts.Length == 4)
+                    {
+                        double xRatio = double.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture);
+                        double yRatio = double.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
+                        double wRatio = double.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
+                        double hRatio = double.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
+
+                        double imgW = bmp.PixelWidth;
+                        double imgH = bmp.PixelHeight;
+                        double ctrlW = partImage.ActualWidth;
+                        double ctrlH = partImage.ActualHeight;
+
+                        if (ctrlW == 0 || ctrlH == 0) return;
+
+                        double scaleX = ctrlW / imgW;
+                        double scaleY = ctrlH / imgH;
+                        double scale = Math.Min(scaleX, scaleY);
+
+                        double renderW = imgW * scale;
+                        double renderH = imgH * scale;
+
+                        double offsetX = (ctrlW - renderW) / 2;
+                        double offsetY = (ctrlH - renderH) / 2;
+
+                        qrCanvas.Width = ctrlW;
+                        qrCanvas.Height = ctrlH;
+
+                        Canvas.SetLeft(qrHighlightBox, offsetX + (xRatio * renderW));
+                        Canvas.SetTop(qrHighlightBox, offsetY + (yRatio * renderH));
+                        qrHighlightBox.Width = wRatio * renderW;
+                        qrHighlightBox.Height = hRatio * renderH;
+                        qrHighlightBox.Visibility = Visibility.Visible;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("ScanForm.UpdateQrRectPosition", ex);
+                    qrHighlightBox.Visibility = Visibility.Collapsed;
+                }
+            }
+            else
+            {
+                qrHighlightBox.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -329,7 +397,16 @@ namespace NixTraceability
         private bool Validate(string scanned, string validationText)
         {
             if (string.IsNullOrEmpty(validationText)) return true;
-            return scanned.Contains(validationText);
+            
+            string[] requiredParts = validationText.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (string part in requiredParts)
+            {
+                if (!scanned.Contains(part.Trim()))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private void SaveAllData()
@@ -407,5 +484,6 @@ namespace NixTraceability
         public string Validation { get; set; } = "";
         public bool CheckDuplicate { get; set; }
         public string ImagePath { get; set; } = "";
+        public string QrRect { get; set; } = "";
     }
 }

@@ -100,7 +100,8 @@ namespace NixTraceability
                                 Sequence = Convert.ToInt32(reader["Sequence"]),
                                 CheckDuplicate = Convert.ToInt32(reader["CheckDuplicate"]) == 1,
                                 IsRequired = Convert.ToInt32(reader["IsRequired"]) == 1,
-                                ImagePath = reader["ImagePath"]?.ToString() ?? ""
+                                ImagePath = reader["ImagePath"]?.ToString() ?? "",
+                                QrRect = reader["QrRect"]?.ToString() ?? ""
                             });
                         }
                     }
@@ -220,6 +221,23 @@ namespace NixTraceability
                 txtNewImagePath.Text = dlg.FileName;
         }
 
+        private void btnSetQrArea_Click(object sender, RoutedEventArgs e)
+        {
+            string imgPath = txtNewImagePath.Text.Trim();
+            if (string.IsNullOrEmpty(imgPath) || !File.Exists(imgPath))
+            {
+                MessageBox.Show("Please select a valid Part Image first before setting QR Area.", "Missing Image", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            QrLocationWindow qrWin = new QrLocationWindow(imgPath, txtNewQrRect.Text);
+            qrWin.Owner = this;
+            if (qrWin.ShowDialog() == true)
+            {
+                txtNewQrRect.Text = qrWin.ResultQrRect;
+            }
+        }
+
         // ── Add/Delete Parts ──────────────────────────────────────────────────
         private void btnAddPart_Click(object sender, RoutedEventArgs e)
         {
@@ -237,6 +255,7 @@ namespace NixTraceability
                 int.TryParse(txtNewSequence.Text, out int seq);
                 int checkDup = chkNewCheckDuplicate.IsChecked == true ? 1 : 0;
                 string imagePath = txtNewImagePath.Text.Trim();
+                string qrRect = txtNewQrRect.Text.Trim();
 
                 using (SQLiteConnection con = Database.GetConnection())
                 {
@@ -246,7 +265,7 @@ namespace NixTraceability
                     {
                         // UPDATE existing part
                         string query = @"UPDATE PartsConfig SET PartName=@n, PartCode=@c, ValidationText=@v, 
-                            Sequence=@s, CheckDuplicate=@cd, ImagePath=@img WHERE Id=@id";
+                            Sequence=@s, CheckDuplicate=@cd, ImagePath=@img, QrRect=@qr WHERE Id=@id";
                         using (SQLiteCommand cmd = new SQLiteCommand(query, con))
                         {
                             cmd.Parameters.AddWithValue("@n", name);
@@ -255,6 +274,7 @@ namespace NixTraceability
                             cmd.Parameters.AddWithValue("@s", seq);
                             cmd.Parameters.AddWithValue("@cd", checkDup);
                             cmd.Parameters.AddWithValue("@img", imagePath);
+                            cmd.Parameters.AddWithValue("@qr", qrRect);
                             cmd.Parameters.AddWithValue("@id", _editingPartId);
                             cmd.ExecuteNonQuery();
                         }
@@ -264,8 +284,8 @@ namespace NixTraceability
                     {
                         // INSERT new part
                         string query = @"INSERT INTO PartsConfig 
-                            (PartName, PartCode, ValidationText, Sequence, CheckDuplicate, IsRequired, ImagePath) 
-                            VALUES (@n, @c, @v, @s, @cd, 1, @img)";
+                            (PartName, PartCode, ValidationText, Sequence, CheckDuplicate, IsRequired, ImagePath, QrRect) 
+                            VALUES (@n, @c, @v, @s, @cd, 1, @img, @qr)";
                         using (SQLiteCommand cmd = new SQLiteCommand(query, con))
                         {
                             cmd.Parameters.AddWithValue("@n", name);
@@ -274,6 +294,7 @@ namespace NixTraceability
                             cmd.Parameters.AddWithValue("@s", seq);
                             cmd.Parameters.AddWithValue("@cd", checkDup);
                             cmd.Parameters.AddWithValue("@img", imagePath);
+                            cmd.Parameters.AddWithValue("@qr", qrRect);
                             cmd.ExecuteNonQuery();
                         }
                     }
@@ -281,7 +302,7 @@ namespace NixTraceability
 
                 txtNewPartName.Clear(); txtNewPartCode.Clear();
                 txtNewValidation.Clear(); txtNewSequence.Clear();
-                txtNewImagePath.Clear();
+                txtNewImagePath.Clear(); txtNewQrRect.Clear();
                 chkNewCheckDuplicate.IsChecked = true;
                 LoadParts();
             }
@@ -305,6 +326,7 @@ namespace NixTraceability
             txtNewSequence.Text = part.Sequence.ToString();
             chkNewCheckDuplicate.IsChecked = part.CheckDuplicate;
             txtNewImagePath.Text = part.ImagePath;
+            txtNewQrRect.Text = part.QrRect;
 
             // Switch to edit mode
             _editingPartId = part.Id;
@@ -446,5 +468,6 @@ namespace NixTraceability
         public bool CheckDuplicate { get; set; }
         public bool IsRequired { get; set; }
         public string ImagePath { get; set; } = string.Empty;
+        public string QrRect { get; set; } = string.Empty;
     }
 }

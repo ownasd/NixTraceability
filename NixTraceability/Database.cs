@@ -39,7 +39,7 @@ namespace NixTraceability
 
                     // ── Schema migration: PartsConfig ────────────────────────────────
                     string checkPartsCol = "PRAGMA table_info(PartsConfig)";
-                    bool hasPartCode = false, hasCheckDup = false, hasImagePath = false, hasPartsRows = false;
+                    bool hasPartCode = false, hasCheckDup = false, hasImagePath = false, hasPartsRows = false, hasQrRect = false;
                     using (SQLiteCommand cmd = new SQLiteCommand(checkPartsCol, con))
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
@@ -50,6 +50,7 @@ namespace NixTraceability
                             if (col == "PartCode") hasPartCode = true;
                             if (col == "CheckDuplicate") hasCheckDup = true;
                             if (col == "ImagePath") hasImagePath = true;
+                            if (col == "QrRect") hasQrRect = true;
                         }
                     }
 
@@ -70,6 +71,11 @@ namespace NixTraceability
                         if (hasPartsRows && !hasImagePath)
                         {
                             using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE PartsConfig ADD COLUMN ImagePath TEXT DEFAULT '';", con))
+                                cmd.ExecuteNonQuery();
+                        }
+                        if (hasPartsRows && !hasQrRect)
+                        {
+                            using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE PartsConfig ADD COLUMN QrRect TEXT DEFAULT '';", con))
                                 cmd.ExecuteNonQuery();
                         }
                     }
@@ -108,7 +114,8 @@ namespace NixTraceability
                         Sequence INTEGER,
                         CheckDuplicate INTEGER DEFAULT 1,
                         IsRequired INTEGER,
-                        ImagePath TEXT DEFAULT '')";
+                        ImagePath TEXT DEFAULT '',
+                        QrRect TEXT DEFAULT '')";
 
                     string q2 = @"CREATE TABLE IF NOT EXISTS ScanRecords (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,0 +1,39 @@
+<Window x:Class="NixTraceability.QrLocationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Set QR Location" Height="600" Width="800"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource AppBackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{DynamicResource PanelBackgroundBrush}" Padding="15">
+            <TextBlock Text="Click and drag on the image to set the QR Code scanning area." 
+                       Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="SemiBold"/>
+        </Border>
+
+        <!-- Area for Drawing -->
+        <Border Grid.Row="1" Background="#222" Margin="10">
+            <Viewbox Stretch="Uniform">
+                <Grid x:Name="drawingGrid" MouseDown="Grid_MouseDown" MouseMove="Grid_MouseMove" MouseUp="Grid_MouseUp" Cursor="Cross">
+                    <!-- Image to draw on -->
+                    <Image x:Name="imgPart" Stretch="None"/>
+                    <Canvas x:Name="drawingCanvas">
+                        <Rectangle x:Name="selectionRect" Stroke="#00FF00" StrokeThickness="2" Fill="#3300FF00" Visibility="Collapsed" />
+                    </Canvas>
+                </Grid>
+            </Viewbox>
+        </Border>
+
+        <Border Grid.Row="2" Background="{DynamicResource PanelBackgroundBrush}" Padding="10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Clear Area" Width="100" Height="35" Margin="0,0,10,0" Background="#DC3545" Foreground="White" BorderThickness="0" Click="btnClear_Click"/>
+                <Button Content="Cancel" Width="90" Height="35" Margin="0,0,10,0" Background="{DynamicResource ControlBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0" Click="btnCancel_Click"/>
+                <Button Content="Save Location" Width="130" Height="35" Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0" Click="btnSave_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

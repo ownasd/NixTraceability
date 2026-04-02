@@ -150,7 +150,26 @@
                                                Foreground="{DynamicResource SecondaryTextBrush}"
                                                FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                                 </StackPanel>
-                                <Image x:Name="partImage" Stretch="Uniform" Margin="12"/>
+                                <Grid>
+                                    <Image x:Name="partImage" Stretch="Uniform" Margin="12" SizeChanged="partImage_SizeChanged"/>
+                                    <Canvas x:Name="qrCanvas" Margin="12">
+                                        <Rectangle x:Name="qrHighlightBox" Visibility="Collapsed"
+                                                   Stroke="#00FFFF" StrokeThickness="3" Fill="#6600FFFF">
+                                            <Rectangle.Effect>
+                                                <DropShadowEffect Color="#00FFFF" BlurRadius="20" ShadowDepth="0" Direction="0" Opacity="0.8"/>
+                                            </Rectangle.Effect>
+                                            <Rectangle.Triggers>
+                                                <EventTrigger RoutedEvent="Loaded">
+                                                    <BeginStoryboard>
+                                                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.3" To="1.0" Duration="0:0:0.75" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Rectangle.Triggers>
+                                        </Rectangle>
+                                    </Canvas>
+                                </Grid>
                             </Grid>
                         </Border>
                         <Border VerticalAlignment="Top" HorizontalAlignment="Stretch"
