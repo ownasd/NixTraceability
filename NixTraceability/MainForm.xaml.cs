@@ -95,14 +95,19 @@ namespace NixTraceability
 
         private void Settings_Click(object sender, RoutedEventArgs e)
         {
-            var settingsForm = new SettingsForm();
-            settingsForm.Closed += (s, args) =>
+            var pwdWindow = new PasswordWindow();
+            pwdWindow.Owner = this;
+            if (pwdWindow.ShowDialog() == true && pwdWindow.IsAuthenticated)
             {
-                // Reload logo if settings changed
-                LoadCompanyLogo();
-                LoadDashboardStats();
-            };
-            settingsForm.Show();
+                var settingsForm = new SettingsForm();
+                settingsForm.Closed += (s, args) =>
+                {
+                    // Reload logo if settings changed
+                    LoadCompanyLogo();
+                    LoadDashboardStats();
+                };
+                settingsForm.Show();
+            }
         }
     }
 }

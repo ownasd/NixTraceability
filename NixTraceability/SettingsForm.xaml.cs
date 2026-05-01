@@ -38,6 +38,12 @@ namespace NixTraceability
             txtExportPath.Text = Database.GetSetting("DataExportPath", @"C:\Exports\");
             chkAutoBackup.IsChecked = Database.GetSetting("AutoBackup", "1") == "1";
 
+            chkFirebaseSync.IsChecked = Database.GetSetting("FirebaseSyncEnabled", "0") == "1";
+            txtFirebaseUrl.Text = Database.GetSetting("FirebaseUrl", "");
+
+            chkFirebaseValidation.IsChecked = Database.GetSetting("FirebaseValidationEnabled", "0") == "1";
+            txtFirebaseValidationNode.Text = Database.GetSetting("FirebaseValidationNode", "IR PCBA SUB ASSy");
+
             // Load Logo path
             txtLogoPath.Text = Database.GetSetting("LogoPath", "");
             UpdateLogoPreview(txtLogoPath.Text);
@@ -101,7 +107,9 @@ namespace NixTraceability
                                 CheckDuplicate = Convert.ToInt32(reader["CheckDuplicate"]) == 1,
                                 IsRequired = Convert.ToInt32(reader["IsRequired"]) == 1,
                                 ImagePath = reader["ImagePath"]?.ToString() ?? "",
-                                QrRect = reader["QrRect"]?.ToString() ?? ""
+                                QrRect = reader["QrRect"]?.ToString() ?? "",
+                                ScanLengthLimit = reader["ScanLengthLimit"] != DBNull.Value ? Convert.ToInt32(reader["ScanLengthLimit"]) : 0,
+                                FirebaseValidationNode = reader["FirebaseValidationNode"]?.ToString() ?? ""
                             });
                         }
                     }
@@ -253,9 +261,11 @@ namespace NixTraceability
                 }
 
                 int.TryParse(txtNewSequence.Text, out int seq);
+                int.TryParse(txtNewScanLimit.Text, out int scanLimit);
                 int checkDup = chkNewCheckDuplicate.IsChecked == true ? 1 : 0;
                 string imagePath = txtNewImagePath.Text.Trim();
                 string qrRect = txtNewQrRect.Text.Trim();
+                string firebaseNode = txtNewFirebaseNode.Text.Trim();
 
                 using (SQLiteConnection con = Database.GetConnection())
                 {
@@ -265,7 +275,7 @@ namespace NixTraceability
                     {
                         // UPDATE existing part
                         string query = @"UPDATE PartsConfig SET PartName=@n, PartCode=@c, ValidationText=@v, 
-                            Sequence=@s, CheckDuplicate=@cd, ImagePath=@img, QrRect=@qr WHERE Id=@id";
+                            Sequence=@s, CheckDuplicate=@cd, ImagePath=@img, QrRect=@qr, ScanLengthLimit=@sl, FirebaseValidationNode=@fbn WHERE Id=@id";
                         using (SQLiteCommand cmd = new SQLiteCommand(query, con))
                         {
                             cmd.Parameters.AddWithValue("@n", name);
@@ -275,6 +285,8 @@ namespace NixTraceability
                             cmd.Parameters.AddWithValue("@cd", checkDup);
                             cmd.Parameters.AddWithValue("@img", imagePath);
                             cmd.Parameters.AddWithValue("@qr", qrRect);
+                            cmd.Parameters.AddWithValue("@sl", scanLimit);
+                            cmd.Parameters.AddWithValue("@fbn", firebaseNode);
                             cmd.Parameters.AddWithValue("@id", _editingPartId);
                             cmd.ExecuteNonQuery();
                         }
@@ -284,8 +296,8 @@ namespace NixTraceability
                     {
                         // INSERT new part
                         string query = @"INSERT INTO PartsConfig 
-                            (PartName, PartCode, ValidationText, Sequence, CheckDuplicate, IsRequired, ImagePath, QrRect) 
-                            VALUES (@n, @c, @v, @s, @cd, 1, @img, @qr)";
+                            (PartName, PartCode, ValidationText, Sequence, CheckDuplicate, IsRequired, ImagePath, QrRect, ScanLengthLimit, FirebaseValidationNode) 
+                            VALUES (@n, @c, @v, @s, @cd, 1, @img, @qr, @sl, @fbn)";
                         using (SQLiteCommand cmd = new SQLiteCommand(query, con))
                         {
                             cmd.Parameters.AddWithValue("@n", name);
@@ -295,6 +307,8 @@ namespace NixTraceability
                             cmd.Parameters.AddWithValue("@cd", checkDup);
                             cmd.Parameters.AddWithValue("@img", imagePath);
                             cmd.Parameters.AddWithValue("@qr", qrRect);
+                            cmd.Parameters.AddWithValue("@sl", scanLimit);
+                            cmd.Parameters.AddWithValue("@fbn", firebaseNode);
                             cmd.ExecuteNonQuery();
                         }
                     }
@@ -302,7 +316,8 @@ namespace NixTraceability
 
                 txtNewPartName.Clear(); txtNewPartCode.Clear();
                 txtNewValidation.Clear(); txtNewSequence.Clear();
-                txtNewImagePath.Clear(); txtNewQrRect.Clear();
+                txtNewImagePath.Clear(); txtNewQrRect.Clear(); txtNewScanLimit.Text = "0";
+                txtNewFirebaseNode.Clear();
                 chkNewCheckDuplicate.IsChecked = true;
                 LoadParts();
             }
@@ -324,9 +339,11 @@ namespace NixTraceability
             txtNewPartCode.Text = part.PartCode;
             txtNewValidation.Text = part.ValidationText;
             txtNewSequence.Text = part.Sequence.ToString();
+            txtNewScanLimit.Text = part.ScanLengthLimit.ToString();
             chkNewCheckDuplicate.IsChecked = part.CheckDuplicate;
             txtNewImagePath.Text = part.ImagePath;
             txtNewQrRect.Text = part.QrRect;
+            txtNewFirebaseNode.Text = part.FirebaseValidationNode;
 
             // Switch to edit mode
             _editingPartId = part.Id;
@@ -407,10 +424,46 @@ namespace NixTraceability
             MessageBox.Show("✅ Appearance & Audio Settings Saved!", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
+        private async void btnTestFirebase_Click(object sender, RoutedEventArgs e)
+        {
+            string barcode = txtTestBarcode.Text.Trim();
+            string node = txtFirebaseValidationNode.Text.Trim();
+
+            if (string.IsNullOrEmpty(barcode))
+            {
+                MessageBox.Show("Please enter a test barcode first.", "Test", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (string.IsNullOrEmpty(node))
+            {
+                MessageBox.Show("Please enter a Firebase Validation Node first.", "Test", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            btnTestFirebase.IsEnabled = false;
+            btnTestFirebase.Content = "⏳ Testing...";
+            borderTestResult.Visibility = System.Windows.Visibility.Collapsed;
+
+            var (found, details) = await FirebaseHelper.TestPcbaLookupAsync(barcode, node);
+
+            btnTestFirebase.IsEnabled = true;
+            btnTestFirebase.Content = "🔍 Test Lookup";
+
+            txtTestResult.Text = details;
+            txtTestResult.Foreground = found
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 136))
+                : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 80, 80));
+            borderTestResult.Visibility = System.Windows.Visibility.Visible;
+        }
+
         private void btnSaveDataSettings_Click(object sender, RoutedEventArgs e)
         {
             Database.SaveSetting("DataExportPath", txtExportPath.Text);
             Database.SaveSetting("AutoBackup", chkAutoBackup.IsChecked == true ? "1" : "0");
+            Database.SaveSetting("FirebaseSyncEnabled", chkFirebaseSync.IsChecked == true ? "1" : "0");
+            Database.SaveSetting("FirebaseUrl", txtFirebaseUrl.Text.Trim());
+            Database.SaveSetting("FirebaseValidationEnabled", chkFirebaseValidation.IsChecked == true ? "1" : "0");
+            Database.SaveSetting("FirebaseValidationNode", txtFirebaseValidationNode.Text.Trim());
             MessageBox.Show("✅ Data & Backup Settings Saved!", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -428,6 +481,10 @@ namespace NixTraceability
 
             Database.SaveSetting("DataExportPath", txtExportPath.Text);
             Database.SaveSetting("AutoBackup", chkAutoBackup.IsChecked == true ? "1" : "0");
+            Database.SaveSetting("FirebaseSyncEnabled", chkFirebaseSync.IsChecked == true ? "1" : "0");
+            Database.SaveSetting("FirebaseUrl", txtFirebaseUrl.Text.Trim());
+            Database.SaveSetting("FirebaseValidationEnabled", chkFirebaseValidation.IsChecked == true ? "1" : "0");
+            Database.SaveSetting("FirebaseValidationNode", txtFirebaseValidationNode.Text.Trim());
 
             // Save Parts Grid changes
             using (SQLiteConnection con = Database.GetConnection())
@@ -469,5 +526,7 @@ namespace NixTraceability
         public bool IsRequired { get; set; }
         public string ImagePath { get; set; } = string.Empty;
         public string QrRect { get; set; } = string.Empty;
+        public int ScanLengthLimit { get; set; }
+        public string FirebaseValidationNode { get; set; } = string.Empty;
     }
 }

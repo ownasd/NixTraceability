@@ -91,8 +91,10 @@ namespace NixTraceability
                                 Code = reader["PartCode"].ToString() ?? "",
                                 Validation = reader["ValidationText"].ToString() ?? "",
                                 CheckDuplicate = Convert.ToInt32(reader["CheckDuplicate"]) == 1,
+                                ScanLengthLimit = reader["ScanLengthLimit"] != DBNull.Value ? Convert.ToInt32(reader["ScanLengthLimit"]) : 0,
                                 ImagePath = reader["ImagePath"]?.ToString() ?? "",
-                                QrRect = reader["QrRect"]?.ToString() ?? ""
+                                QrRect = reader["QrRect"]?.ToString() ?? "",
+                                FirebaseValidationNode = reader["FirebaseValidationNode"]?.ToString() ?? ""
                             };
                             partImagePaths.Add(p.ImagePath);
 
@@ -320,7 +322,7 @@ namespace NixTraceability
             }
         }
 
-        private void Scan_KeyDown(object sender, KeyEventArgs e)
+        private async void Scan_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key != Key.Enter) return;
 
@@ -361,8 +363,65 @@ namespace NixTraceability
                 }
             }
 
+            // QR LENGTH VALIDATION (if limit is > 0, scanned length must exactly match)
+            if (p.ScanLengthLimit > 0 && value.Length != p.ScanLengthLimit)
+            {
+                if (current.Parent is Border bLen) bLen.Background = new SolidColorBrush(Color.FromRgb(255, 80, 80));
+                PlaySound(false);
+                lblFooter.Text = $"❌ WRONG LENGTH — Expected {p.ScanLengthLimit}, got {value.Length} chars";
+                MessageBox.Show(
+                    $"❌ INVALID QR CODE LENGTH!\n\n" +
+                    $"Part: {p.Name}\n" +
+                    $"Required Length: {p.ScanLengthLimit} characters\n" +
+                    $"Scanned Length:  {value.Length} characters\n\n" +
+                    $"Please scan the correct QR code.",
+                    "Length Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                current.Clear(); current.Focus();
+                if (current.Parent is Border bLenReset) bLenReset.Background = Brushes.White;
+                lblFooter.Text = "SCAN THE BARCODE";
+                return;
+            }
+
             if (Validate(value, p.Validation))
             {
+                // FIREBASE CHECK — Triggered when FirebaseValidationNode is set on the part
+                // OR when the part name contains "PCBA" (backward compat)
+                bool needsFirebaseCheck = !string.IsNullOrWhiteSpace(p.FirebaseValidationNode)
+                    || p.Name.IndexOf("PCBA", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (needsFirebaseCheck)
+                {
+                    current.IsEnabled = false;
+                    string validationNode = !string.IsNullOrWhiteSpace(p.FirebaseValidationNode)
+                        ? p.FirebaseValidationNode
+                        : Database.GetSetting("FirebaseValidationNode", "IR PCBA SUB ASSy");
+                    lblFooter.Text = $"⏳ VALIDATING IN FIREBASE ({validationNode})...";
+                    
+                    bool existsInFirebase = await FirebaseHelper.CheckIfPcbaExistsAsync(value, validationNode);
+                    
+                    current.IsEnabled = true;
+                    current.Focus();
+                    
+                    if (!existsInFirebase)
+                    {
+                        if (current.Parent is Border bNgFb) bNgFb.Background = new SolidColorBrush(Color.FromRgb(255, 60, 60));
+                        PlaySound(false);
+                        lblFooter.Text = "❌ NOT FOUND IN FIREBASE — SCAN AT SUB-ASSEMBLY FIRST";
+                        MessageBox.Show(
+                            $"❌ FIREBASE VALIDATION ERROR!\n\n" +
+                            $"Barcode: {value}\n" +
+                            $"Node: {validationNode}\n\n" +
+                            $"This part was NOT found in Nixirtrace sub-assembly records.\n" +
+                            $"Please make sure it is scanned at the sub-assembly station first.",
+                            "Firebase Validation Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                        current.Clear();
+                        if (current.Parent is Border bFbReset) bFbReset.Background = Brushes.White;
+                        return;
+                    }
+                    
+                    lblFooter.Text = "✅ FIREBASE VALIDATION PASSED";
+                }
+
                 if (current.Parent is Border bOk)
                     bOk.Background = new SolidColorBrush(Color.FromRgb(100, 220, 120));
                 PlaySound(true);
@@ -426,12 +485,45 @@ namespace NixTraceability
 
                 long recordId = Database.InsertScanMaster("OK", opId, shift, batch);
 
+                string macId = "";
+                var scannedPartsDict = new Dictionary<string, string>();
+
                 foreach (TextBox txt in textBoxes)
                 {
                     PartInfo? part = txt.Tag as PartInfo;
                     if (part == null) continue;
+                    
                     Database.InsertScanDetail(recordId, part.Code, txt.Text, "OK");
+                    
+                    // Sanitize the part name before using it as a Firebase JSON key
+                    string sanitizedKey = SanitizeFirebaseKey(part.Name);
+                    scannedPartsDict[sanitizedKey] = txt.Text;
+                    
+                    if (part.Name.IndexOf("MAC", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        macId = txt.Text.Trim();
+                    }
                 }
+
+                // If no part with "MAC" in its name was found, use the first scanned part value as a fallback MAC ID
+                if (string.IsNullOrEmpty(macId))
+                {
+                    macId = textBoxes.Count > 0 ? textBoxes[0].Text.Trim() : $"Record_{recordId}";
+                }
+
+                // Trigger Firebase Sync asynchronously so it does not block the UI
+                var syncData = new
+                {
+                    RecordId = recordId,
+                    Operator = opId,
+                    Shift = shift,
+                    Batch = batch,
+                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    StationName = Database.GetSetting("StationName", "Assembly"),
+                    Parts = scannedPartsDict
+                };
+                
+                _ = FirebaseHelper.SyncDataAsync(macId, syncData);
 
                 Logger.LogInfo("ScanForm.SaveAllData", $"Record saved. Op={opId}, Shift={shift}, Batch={batch}");
 
@@ -475,6 +567,18 @@ namespace NixTraceability
             timer.Stop();
             this.Close();
         }
+
+        private string SanitizeFirebaseKey(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return "Unknown";
+            // Firebase keys cannot contain . $ # [ ] /
+            return key.Replace(".", "_")
+                      .Replace("$", "_")
+                      .Replace("#", "_")
+                      .Replace("[", "_")
+                      .Replace("]", "_")
+                      .Replace("/", "_");
+        }
     }
 
     public class PartInfo
@@ -483,7 +587,9 @@ namespace NixTraceability
         public string Code { get; set; } = "";
         public string Validation { get; set; } = "";
         public bool CheckDuplicate { get; set; }
+        public int ScanLengthLimit { get; set; }
         public string ImagePath { get; set; } = "";
         public string QrRect { get; set; } = "";
+        public string FirebaseValidationNode { get; set; } = "";
     }
 }

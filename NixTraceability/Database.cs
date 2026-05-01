@@ -39,7 +39,7 @@ namespace NixTraceability
 
                     // ── Schema migration: PartsConfig ────────────────────────────────
                     string checkPartsCol = "PRAGMA table_info(PartsConfig)";
-                    bool hasPartCode = false, hasCheckDup = false, hasImagePath = false, hasPartsRows = false, hasQrRect = false;
+                    bool hasPartCode = false, hasCheckDup = false, hasImagePath = false, hasPartsRows = false, hasQrRect = false, hasScanLimit = false, hasFirebaseNode = false;
                     using (SQLiteCommand cmd = new SQLiteCommand(checkPartsCol, con))
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
@@ -51,6 +51,8 @@ namespace NixTraceability
                             if (col == "CheckDuplicate") hasCheckDup = true;
                             if (col == "ImagePath") hasImagePath = true;
                             if (col == "QrRect") hasQrRect = true;
+                            if (col == "ScanLengthLimit") hasScanLimit = true;
+                            if (col == "FirebaseValidationNode") hasFirebaseNode = true;
                         }
                     }
 
@@ -76,6 +78,16 @@ namespace NixTraceability
                         if (hasPartsRows && !hasQrRect)
                         {
                             using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE PartsConfig ADD COLUMN QrRect TEXT DEFAULT '';", con))
+                                cmd.ExecuteNonQuery();
+                        }
+                        if (hasPartsRows && !hasScanLimit)
+                        {
+                            using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE PartsConfig ADD COLUMN ScanLengthLimit INTEGER DEFAULT 0;", con))
+                                cmd.ExecuteNonQuery();
+                        }
+                        if (hasPartsRows && !hasFirebaseNode)
+                        {
+                            using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE PartsConfig ADD COLUMN FirebaseValidationNode TEXT DEFAULT '';", con))
                                 cmd.ExecuteNonQuery();
                         }
                     }
@@ -115,7 +127,10 @@ namespace NixTraceability
                         CheckDuplicate INTEGER DEFAULT 1,
                         IsRequired INTEGER,
                         ImagePath TEXT DEFAULT '',
-                        QrRect TEXT DEFAULT '')";
+                        QrRect TEXT DEFAULT '',
+                        ScanLengthLimit INTEGER DEFAULT 0,
+                        FirebaseValidationNode TEXT DEFAULT '')";
+
 
                     string q2 = @"CREATE TABLE IF NOT EXISTS ScanRecords (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,

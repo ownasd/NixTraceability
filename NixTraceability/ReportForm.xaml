@@ -43,6 +43,7 @@
         </DataGrid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button x:Name="btnSync" Content="Sync to Firebase" Width="130" Height="30" Margin="0,0,10,0" Click="btnSync_Click" Style="{StaticResource NavButtonStyle}"/>
             <Button x:Name="btnRefresh" Content="Refresh" Width="100" Height="30" Margin="0,0,10,0" Click="btnRefresh_Click" Style="{StaticResource NavButtonStyle}"/>
             <Button x:Name="btnExport" Content="Export CSV" Width="120" Height="30" Click="btnExport_Click" Style="{StaticResource NavButtonStyle}"/>
         </StackPanel>

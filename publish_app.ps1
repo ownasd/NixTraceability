@@ -5,7 +5,7 @@ $projectPath = ".\NixTraceability\$projectName.csproj"
 $outputDir = ".\Publish"
 
 echo "Cleaning up old publish folder..."
-if (Test-Path $outputDir) { Remove-Item -Recururse -Force $outputDir }
+if (Test-Path $outputDir) { Remove-Item -Recurse -Force $outputDir }
 
 echo "Publishing $projectName..."
 

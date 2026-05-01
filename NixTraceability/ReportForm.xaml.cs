@@ -5,6 +5,7 @@ using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -160,6 +161,161 @@ namespace NixTraceability
         private void btnHome_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
+        }
+
+        private async void btnSync_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (Database.GetSetting("FirebaseSyncEnabled", "0") != "1")
+                {
+                    MessageBox.Show("Firebase Sync is disabled in Settings. Please enable it first.", "Sync Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                DateTime? fromDate = dpFrom.SelectedDate;
+                DateTime? toDate = dpTo.SelectedDate;
+
+                if (!fromDate.HasValue || !toDate.HasValue)
+                {
+                     MessageBox.Show("Please select both 'From' and 'To' dates to sync.", "Sync Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                     return;
+                }
+
+                btnSync.IsEnabled = false;
+                btnSync.Content = "Syncing...";
+
+                int successCount = 0;
+                int failCount = 0;
+                int totalFound = 0;
+
+                string stationName = Database.GetSetting("StationName", "Assembly");
+
+                await Task.Run(async () =>
+                {
+                    using (SQLiteConnection con = Database.GetConnection())
+                    {
+                        con.Open();
+                        string masterQuery = "SELECT * FROM ScanRecords WHERE date(DateTime) >= date(@from) AND date(DateTime) <= date(@to)";
+                        using (SQLiteCommand cmd = new SQLiteCommand(masterQuery, con))
+                        {
+                            cmd.Parameters.AddWithValue("@from", fromDate.Value.ToString("yyyy-MM-dd"));
+                            cmd.Parameters.AddWithValue("@to", toDate.Value.ToString("yyyy-MM-dd"));
+
+                            using (SQLiteDataReader reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    totalFound++;
+                                    long recordId = Convert.ToInt64(reader["Id"]);
+                                    string opId = reader["Operator"].ToString() ?? "";
+                                    string shift = reader["Shift"]?.ToString() ?? "";
+                                    string batch = reader["Batch"]?.ToString() ?? "";
+                                    string timestampStr = reader["DateTime"].ToString() ?? "";
+
+                                    DateTime dtObj;
+                                    if(DateTime.TryParse(timestampStr, out dtObj)) {
+                                         timestampStr = dtObj.ToString("yyyy-MM-dd HH:mm:ss");
+                                    }
+
+                                    string macId = "";
+                                    var scannedPartsDict = new Dictionary<string, string>();
+                                    string firstScanValue = "";
+
+                                    string detailsQuery = @"SELECT sd.Value, pc.PartName 
+                                                            FROM ScanDetails sd 
+                                                            LEFT JOIN PartsConfig pc ON sd.PartCode = pc.PartCode 
+                                                            WHERE sd.RecordId = @id";
+                                    
+                                    using (SQLiteCommand detailCmd = new SQLiteCommand(detailsQuery, con))
+                                    {
+                                        detailCmd.Parameters.AddWithValue("@id", recordId);
+                                        using (SQLiteDataReader detailReader = detailCmd.ExecuteReader())
+                                        {
+                                            bool isFirst = true;
+                                            while (detailReader.Read())
+                                            {
+                                                string pName = detailReader["PartName"].ToString() ?? "Unknown";
+                                                string val = detailReader["Value"].ToString() ?? "";
+
+                                                if (isFirst)
+                                                {
+                                                    firstScanValue = val;
+                                                    isFirst = false;
+                                                }
+
+                                                string sanitizedKey = SanitizeFirebaseKey(pName);
+                                                scannedPartsDict[sanitizedKey] = val;
+
+                                                if (pName.IndexOf("MAC", StringComparison.OrdinalIgnoreCase) >= 0)
+                                                {
+                                                    macId = val;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (string.IsNullOrEmpty(macId))
+                                    {
+                                        macId = !string.IsNullOrEmpty(firstScanValue) ? firstScanValue : $"Record_{recordId}";
+                                    }
+
+                                    var syncData = new
+                                    {
+                                        RecordId = recordId,
+                                        Operator = opId,
+                                        Shift = shift,
+                                        Batch = batch,
+                                        Timestamp = timestampStr,
+                                        StationName = stationName,
+                                        Parts = scannedPartsDict
+                                    };
+
+                                    try
+                                    {
+                                        await FirebaseHelper.SyncDataAsync(macId, syncData);
+                                        successCount++;
+                                    }
+                                    catch
+                                    {
+                                        failCount++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                if(totalFound == 0)
+                {
+                    MessageBox.Show("No records found in the selected date range.", "Sync Result", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show($"Sync Completed.\nTotal Found: {totalFound}\nSuccessfully sent: {successCount}", "Sync Result", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("ReportForm.btnSync_Click", ex);
+                MessageBox.Show("Error during sync: " + ex.Message, "Sync Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                btnSync.IsEnabled = true;
+                btnSync.Content = "Sync to Firebase";
+            }
+        }
+
+        private string SanitizeFirebaseKey(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return "Unknown";
+            return key.Replace(".", "_")
+                      .Replace("$", "_")
+                      .Replace("#", "_")
+                      .Replace("[", "_")
+                      .Replace("]", "_")
+                      .Replace("/", "_");
         }
     }
 }
