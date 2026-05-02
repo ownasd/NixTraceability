@@ -409,17 +409,15 @@ namespace NixTraceability
 
             if (Validate(value, p.Validation))
             {
-                // FIREBASE CHECK — Triggered when FirebaseValidationNode is set on the part
-                // OR when the part name contains "PCBA" (backward compat)
-                bool needsFirebaseCheck = !string.IsNullOrWhiteSpace(p.FirebaseValidationNode)
-                    || p.Name.IndexOf("PCBA", StringComparison.OrdinalIgnoreCase) >= 0;
+                // FIREBASE CHECK — Triggered ONLY when FirebaseValidationNode is explicitly set on the part
+                // and the global FirebaseValidationEnabled setting is turned on.
+                bool isValidationEnabledGlobally = Database.GetSetting("FirebaseValidationEnabled", "0") == "1";
+                bool needsFirebaseCheck = isValidationEnabledGlobally && !string.IsNullOrWhiteSpace(p.FirebaseValidationNode);
 
                 if (needsFirebaseCheck)
                 {
                     current.IsEnabled = false;
-                    string validationNode = !string.IsNullOrWhiteSpace(p.FirebaseValidationNode)
-                        ? p.FirebaseValidationNode
-                        : Database.GetSetting("FirebaseValidationNode", "IR PCBA SUB ASSy");
+                    string validationNode = p.FirebaseValidationNode;
                     lblFooter.Text = $"⏳ VALIDATING IN FIREBASE ({validationNode})...";
                     
                     bool existsInFirebase = await FirebaseHelper.CheckIfPcbaExistsAsync(value, validationNode);

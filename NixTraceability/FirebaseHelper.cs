@@ -71,10 +71,12 @@ namespace NixTraceability
 
                 if (!baseUrl.EndsWith("/")) baseUrl += "/";
 
-                string node = !string.IsNullOrWhiteSpace(customNode)
-                    ? customNode.Trim()
-                    : Database.GetSetting("FirebaseValidationNode", "IR PCBA SUB ASSy").Trim();
-                if (string.IsNullOrEmpty(node)) node = "IR PCBA SUB ASSy";
+                string node = customNode?.Trim() ?? "";
+                if (string.IsNullOrEmpty(node))
+                {
+                    Logger.LogInfo("FirebaseHelper.CheckIfPcbaExistsAsync", "Validation node is empty — skipping validation.");
+                    return true;
+                }
 
                 // Properly encode the Firebase node path (handles spaces, special chars)
                 string encodedNode = Uri.EscapeDataString(node);

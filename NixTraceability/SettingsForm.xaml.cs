@@ -42,7 +42,6 @@ namespace NixTraceability
             txtFirebaseUrl.Text = Database.GetSetting("FirebaseUrl", "");
 
             chkFirebaseValidation.IsChecked = Database.GetSetting("FirebaseValidationEnabled", "0") == "1";
-            txtFirebaseValidationNode.Text = Database.GetSetting("FirebaseValidationNode", "IR PCBA SUB ASSy");
 
             // Load Logo path
             txtLogoPath.Text = Database.GetSetting("LogoPath", "");
@@ -505,37 +504,7 @@ namespace NixTraceability
             MessageBox.Show("✅ Appearance & Audio Settings Saved!", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private async void btnTestFirebase_Click(object sender, RoutedEventArgs e)
-        {
-            string barcode = txtTestBarcode.Text.Trim();
-            string node = txtFirebaseValidationNode.Text.Trim();
 
-            if (string.IsNullOrEmpty(barcode))
-            {
-                MessageBox.Show("Please enter a test barcode first.", "Test", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            if (string.IsNullOrEmpty(node))
-            {
-                MessageBox.Show("Please enter a Firebase Validation Node first.", "Test", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            btnTestFirebase.IsEnabled = false;
-            btnTestFirebase.Content = "⏳ Testing...";
-            borderTestResult.Visibility = System.Windows.Visibility.Collapsed;
-
-            var (found, details) = await FirebaseHelper.TestPcbaLookupAsync(barcode, node);
-
-            btnTestFirebase.IsEnabled = true;
-            btnTestFirebase.Content = "🔍 Test Lookup";
-
-            txtTestResult.Text = details;
-            txtTestResult.Foreground = found
-                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 136))
-                : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 80, 80));
-            borderTestResult.Visibility = System.Windows.Visibility.Visible;
-        }
 
         private void btnSaveDataSettings_Click(object sender, RoutedEventArgs e)
         {
@@ -544,7 +513,6 @@ namespace NixTraceability
             Database.SaveSetting("FirebaseSyncEnabled", chkFirebaseSync.IsChecked == true ? "1" : "0");
             Database.SaveSetting("FirebaseUrl", txtFirebaseUrl.Text.Trim());
             Database.SaveSetting("FirebaseValidationEnabled", chkFirebaseValidation.IsChecked == true ? "1" : "0");
-            Database.SaveSetting("FirebaseValidationNode", txtFirebaseValidationNode.Text.Trim());
             MessageBox.Show("✅ Data & Backup Settings Saved!", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -565,7 +533,6 @@ namespace NixTraceability
             Database.SaveSetting("FirebaseSyncEnabled", chkFirebaseSync.IsChecked == true ? "1" : "0");
             Database.SaveSetting("FirebaseUrl", txtFirebaseUrl.Text.Trim());
             Database.SaveSetting("FirebaseValidationEnabled", chkFirebaseValidation.IsChecked == true ? "1" : "0");
-            Database.SaveSetting("FirebaseValidationNode", txtFirebaseValidationNode.Text.Trim());
 
             // Save Firebase settings
             Database.SaveSetting("FirebaseEnabled", chkFirebaseEnabled.IsChecked == true ? "1" : "0");

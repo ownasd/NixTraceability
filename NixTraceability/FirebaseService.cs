@@ -57,7 +57,8 @@ namespace NixTraceability
                 {
                     request.Headers.TryAddWithoutValidation("Authorization", $"key={config.Value.apiKey}");
                     
-                    using (var response = await httpClient.SendAsync(request, TimeSpan.FromSeconds(5)))
+                    using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    using (var response = await httpClient.SendAsync(request, cts.Token))
                     {
                         if (response.IsSuccessStatusCode)
                         {
@@ -134,7 +135,8 @@ namespace NixTraceability
                 {
                     request.Headers.TryAddWithoutValidation("Authorization", $"key={config.Value.apiKey}");
                     
-                    using (var response = await httpClient.SendAsync(request, TimeSpan.FromSeconds(5)))
+                    using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    using (var response = await httpClient.SendAsync(request, cts.Token))
                     {
                         return response.IsSuccessStatusCode;
                     }
