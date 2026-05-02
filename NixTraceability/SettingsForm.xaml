@@ -95,6 +95,34 @@
                             <ComboBoxItem Content="Whole Month"/>
                         </ComboBox>
 
+                        <!-- Firebase Integration -->
+                        <Border Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="🔗 Firebase Database Validation" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,10"/>
+                                <TextBlock Text="Enable to verify barcodes against Firebase Realtime Database before accepting scans." 
+                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                
+                                <CheckBox x:Name="chkFirebaseEnabled" Content="✅ Enable Firebase Validation" 
+                                          Foreground="{DynamicResource PrimaryTextBrush}" FontSize="15" Margin="0,0,0,15" 
+                                          Checked="chkFirebaseEnabled_Checked" Unchecked="chkFirebaseEnabled_Unchecked"/>
+                                
+                                <TextBlock Text="Firebase Config URL (Database URL)" Style="{StaticResource LabelText}"/>
+                                <TextBox x:Name="txtFirebaseConfigUrl" Background="{DynamicResource ControlBackgroundBrush}" 
+                                         Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}" 
+                                         Padding="10" FontSize="14" Margin="0,0,0,10" 
+                                         TextChanged="txtFirebaseConfigUrl_TextChanged"/>
+                                
+                                <TextBlock Text="Firebase API Key" Style="{StaticResource LabelText}"/>
+                                <PasswordBox x:Name="txtFirebaseApiKey" Background="{DynamicResource ControlBackgroundBrush}" 
+                                             Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}" 
+                                             Padding="10" FontSize="14" Margin="0,0,0,15" PasswordChar="●"/>
+                                
+                                <Button x:Name="btnTestFirebase" Content="🧪 Test Connection" Width="150" Height="38" 
+                                        HorizontalAlignment="Left" Background="#17A2B8" Foreground="White" BorderThickness="0" 
+                                        Click="btnTestFirebase_Click" FontSize="14"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Company Logo -->
                         <TextBlock Text="Company Logo (Display on Dashboard)" Style="{StaticResource LabelText}"/>
                         <Grid Margin="0,0,0,10">

@@ -55,6 +55,17 @@ namespace NixTraceability
             // Load Sound paths
             txtOkSoundPath.Text = Database.GetSetting("OkSoundPath", "");
             txtNgSoundPath.Text = Database.GetSetting("NgSoundPath", "");
+
+            // Load Firebase settings
+            bool firebaseEnabled = Database.GetSetting("FirebaseEnabled", "0") == "1";
+            chkFirebaseEnabled.IsChecked = firebaseEnabled;
+            txtFirebaseConfigUrl.Text = Database.GetSetting("FirebaseConfigUrl", "");
+            txtFirebaseApiKey.Password = Database.GetSetting("FirebaseApiKey", "");
+            
+            // Enable/disable Firebase fields based on checkbox
+            txtFirebaseConfigUrl.IsEnabled = firebaseEnabled;
+            txtFirebaseApiKey.IsEnabled = firebaseEnabled;
+            btnTestFirebase.IsEnabled = firebaseEnabled;
         }
 
         private void UpdateLogoPreview(string path)
@@ -405,6 +416,76 @@ namespace NixTraceability
             MessageBox.Show("✅ General Settings Saved!", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
+        private void chkFirebaseEnabled_Checked(object sender, RoutedEventArgs e)
+        {
+            txtFirebaseConfigUrl.IsEnabled = true;
+            txtFirebaseApiKey.IsEnabled = true;
+            btnTestFirebase.IsEnabled = true;
+        }
+
+        private void chkFirebaseEnabled_Unchecked(object sender, RoutedEventArgs e)
+        {
+            txtFirebaseConfigUrl.IsEnabled = false;
+            txtFirebaseApiKey.IsEnabled = false;
+            btnTestFirebase.IsEnabled = false;
+        }
+
+        private void txtFirebaseConfigUrl_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            // Auto-enable Firebase when URL is entered
+            if (!string.IsNullOrWhiteSpace(txtFirebaseConfigUrl.Text) && chkFirebaseEnabled.IsChecked != true)
+            {
+                chkFirebaseEnabled.IsChecked = true;
+            }
+        }
+
+        private async void btnTestFirebase_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string configUrl = txtFirebaseConfigUrl.Text.Trim();
+                string apiKey = txtFirebaseApiKey.Password;
+
+                if (string.IsNullOrEmpty(configUrl) || string.IsNullOrEmpty(apiKey))
+                {
+                    MessageBox.Show("⚠️ Please enter both Config URL and API Key.", "Firebase Test", 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Temporarily save to test
+                Database.SaveSetting("FirebaseConfigUrl", configUrl);
+                Database.SaveSetting("FirebaseApiKey", apiKey);
+
+                btnTestFirebase.Content = "⏳ Testing...";
+                btnTestFirebase.IsEnabled = false;
+
+                bool success = await FirebaseService.TestConnectionAsync();
+
+                btnTestFirebase.Content = "🧪 Test Connection";
+                btnTestFirebase.IsEnabled = true;
+
+                if (success)
+                {
+                    MessageBox.Show("✅ Firebase connection successful!", "Firebase Test", 
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("❌ Firebase connection failed.\nPlease check your Config URL and API Key.", 
+                        "Firebase Test", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("SettingsForm.btnTestFirebase_Click", ex);
+                btnTestFirebase.Content = "🧪 Test Connection";
+                btnTestFirebase.IsEnabled = true;
+                MessageBox.Show("❌ Error testing Firebase: " + ex.Message, "Firebase Test", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void cmbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (this.IsLoaded)
@@ -485,6 +566,11 @@ namespace NixTraceability
             Database.SaveSetting("FirebaseUrl", txtFirebaseUrl.Text.Trim());
             Database.SaveSetting("FirebaseValidationEnabled", chkFirebaseValidation.IsChecked == true ? "1" : "0");
             Database.SaveSetting("FirebaseValidationNode", txtFirebaseValidationNode.Text.Trim());
+
+            // Save Firebase settings
+            Database.SaveSetting("FirebaseEnabled", chkFirebaseEnabled.IsChecked == true ? "1" : "0");
+            Database.SaveSetting("FirebaseConfigUrl", txtFirebaseConfigUrl.Text.Trim());
+            Database.SaveSetting("FirebaseApiKey", txtFirebaseApiKey.Password);
 
             // Save Parts Grid changes
             using (SQLiteConnection con = Database.GetConnection())
