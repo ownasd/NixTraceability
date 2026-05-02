@@ -266,6 +266,31 @@ namespace NixTraceability
             string value = current.Text.Trim();
             if (string.IsNullOrEmpty(value)) return;
 
+            // FIREBASE CHECK - Only for enabled parts
+            bool firebaseEnabled = Database.GetSetting("FirebaseEnabled", "0") == "1";
+            if (firebaseEnabled && !string.IsNullOrEmpty(Database.GetSetting("FirebaseConfigUrl", "")))
+            {
+                try
+                {
+                    bool existsInFirebase = FirebaseService.CheckBarcodeInFirebase(p.Code, value);
+                    if (!existsInFirebase)
+                    {
+                        if (current.Parent is Border bFb) bFb.Background = new SolidColorBrush(Color.FromRgb(180, 30, 30));
+                        PlaySound(false);
+                        MessageBox.Show($"❌ NOT FOUND IN DATABASE!\nThis barcode ({value}) does not exist in Firebase for part {p.Name}.", 
+                            "Firebase Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        current.Clear(); current.Focus();
+                        if (current.Parent is Border bFbReset) bFbReset.Background = Brushes.White;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("ScanForm.Scan_KeyDown.Firebase", ex);
+                    // On error, allow scan to continue (fail-safe)
+                }
+            }
+
             // DUPLICATE PREVENTION
             if (p.CheckDuplicate)
             {
