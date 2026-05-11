@@ -42,12 +42,66 @@ namespace NixTraceability
                 else
                 {
                     Logger.LogInfo("FirebaseHelper.SyncData", $"Successfully synced MAC ID {macId} to Firebase.");
+                    // Increment Assembly Metrics
+                    _ = IncrementDailyMetricAsync("Assembled");
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogError("FirebaseHelper.SyncData", ex);
             }
+        }
+
+        public static async Task IncrementDailyMetricAsync(string metricType)
+        {
+            try
+            {
+                if (Database.GetSetting("FirebaseSyncEnabled", "0") != "1") return;
+
+                string baseUrl = Database.GetSetting("FirebaseUrl", "").Trim();
+                if (string.IsNullOrEmpty(baseUrl) || (!baseUrl.StartsWith("http://") && !baseUrl.StartsWith("https://"))) return;
+                if (!baseUrl.EndsWith("/")) baseUrl += "/";
+
+                string monthStr = DateTime.Now.ToString("yyyy-MM");
+                string dayStr = DateTime.Now.ToString("yyyy-MM-dd");
+
+                await IncrementSingleMetricAsync($"{baseUrl}Metrics/AllTime/Total{metricType}.json");
+                await IncrementSingleMetricAsync($"{baseUrl}Metrics/{monthStr}/Month{metricType}.json");
+                await IncrementSingleMetricAsync($"{baseUrl}Metrics/{dayStr}/Today{metricType}.json");
+
+                // Save LastAssemblyTimestamp
+                if (metricType == "Assembled")
+                {
+                    string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    var tsContent = new StringContent($"\"{ts}\"", Encoding.UTF8, "application/json");
+                    await client.PutAsync($"{baseUrl}Metrics/LastAssemblyTimestamp.json", tsContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("FirebaseHelper.IncrementDailyMetricAsync", ex);
+            }
+        }
+
+        private static async Task IncrementSingleMetricAsync(string url)
+        {
+            try
+            {
+                int currentVal = 0;
+                var getRes = await client.GetAsync(url);
+                if (getRes.IsSuccessStatusCode)
+                {
+                    string content = await getRes.Content.ReadAsStringAsync();
+                    if (!string.IsNullOrWhiteSpace(content) && content != "null")
+                    {
+                        int.TryParse(content, out currentVal);
+                    }
+                }
+                currentVal++;
+                var putContent = new StringContent(currentVal.ToString(), Encoding.UTF8, "application/json");
+                await client.PutAsync(url, putContent);
+            }
+            catch { }
         }
 
         /// <summary>
